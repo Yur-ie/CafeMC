@@ -2,6 +2,7 @@ package dev.lizainslie.cafemc.data
 
 import dev.lizainslie.cafemc.data.location.SavedLocationsTable
 import dev.lizainslie.cafemc.data.player.PlayerSettingsTable
+import dev.lizainslie.cafemc.chat.data.PrivateMessagesTable
 import dev.lizainslie.cafemc.economy.data.EconomyAccountsTable
 import dev.lizainslie.cafemc.economy.data.PlayerTransactionsTable
 import dev.lizainslie.cafemc.protect.data.LockedBlockBreakIncidentsTable
@@ -12,6 +13,7 @@ fun migrate() {
     val tables = listOf(
         SavedLocationsTable,
         PlayerSettingsTable,
+        PrivateMessagesTable,
         EconomyAccountsTable,
         PlayerTransactionsTable,
         LockedBlocksTable,

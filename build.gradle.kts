@@ -175,6 +175,10 @@ bukkitPluginYaml {
         register("cafe.nickname") {
             description = "Set your nickname"
         }
+
+        register("cafe.msg") {
+            description = "Send private messages"
+        }
     }
     
     commands {
@@ -271,6 +275,12 @@ bukkitPluginYaml {
             permission = "cafe.nickname"
             usage = "/<command> [nickname]"
             aliases = listOf("nick")
+        }
+
+        register("msg") {
+            description = "Send a private message"
+            permission = "cafe.msg"
+            usage = "/<command> <player> <message>"
         }
 
         register("elytra") {
