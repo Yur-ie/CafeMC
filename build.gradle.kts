@@ -133,6 +133,10 @@ bukkitPluginYaml {
             description = "Toggle AFK status"
         }
 
+        register("cafe.casino") {
+            description = "Play casino minigames"
+        }
+
         register("cafe.rename") {
             description = "Rename the item in your hand"
         }
@@ -215,6 +219,12 @@ bukkitPluginYaml {
             description = "Toggle AFK status"
             permission = "cafe.afk"
             usage = "/<command>"
+        }
+
+        register("casino") {
+            description = "Play casino minigames"
+            permission = "cafe.casino"
+            usage = "/<command> [coinflip|dice|roulette|slots|blackjack|mines] <bet> [choice]"
         }
         
         register("rename") {

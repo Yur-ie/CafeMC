@@ -4,6 +4,7 @@ import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import dev.lizainslie.cafemc.afk.AfkModule
 import dev.lizainslie.cafemc.auditing.AuditModule
+import dev.lizainslie.cafemc.casino.CasinoModule
 import dev.lizainslie.cafemc.chat.ChatModule
 import dev.lizainslie.cafemc.core.cmd.CommandMap
 import dev.lizainslie.cafemc.commands.RenameCommand
@@ -32,6 +33,7 @@ class CafeMC : JavaPlugin() {
     private val modules = listOf(
         OnlinePlayerCacheModule,
         AuditModule,
+        CasinoModule,
         ChatModule,
         TeleportModule,
         AfkModule,
