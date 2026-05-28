@@ -1,0 +1,19 @@
+enabled: true
+bet:
+  default: 10.0
+  max: 1000.0
+cooldownSeconds: 3
+house:
+  targetWinRate: 0.62
+  influence: 0.35
+postResultOverride:
+  enabled: false
+  everyGames: 0
+  maxRerolls: 25
+stats:
+  rounds: 0
+  houseWins: 0
+  playerWins: 0
+  moneyIn: 0.0
+  moneyOut: 0.0
+  postResultOverrides: 0

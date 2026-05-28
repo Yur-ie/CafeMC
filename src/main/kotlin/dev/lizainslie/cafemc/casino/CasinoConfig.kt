@@ -11,7 +11,15 @@ object CasinoConfig {
     private val configs = mutableMapOf<String, YamlConfiguration>()
 
     fun preGenerateAll(games: List<CasinoGame>) {
-        games.forEach { config(it) }
+        if (!configFolder.exists()) configFolder.mkdirs()
+        games.forEach { game ->
+            val relativePath = "casino/config/${game.id}.yml"
+            val dataFile = File(configFolder, "${game.id}.yml")
+            if (!dataFile.exists()) {
+                CafeMC.instance.saveResource(relativePath, false)
+            }
+            config(game)
+        }
     }
 
     fun settings(game: CasinoGame): CasinoGameSettings {
