@@ -6,9 +6,13 @@ import java.io.File
 import kotlin.math.max
 
 object CasinoConfig {
-    private val configFolder = File(CafeMC.instance.dataFolder, "casino")
+    private val configFolder = File(CafeMC.instance.dataFolder, "casino/config")
     private val files = mutableMapOf<String, File>()
     private val configs = mutableMapOf<String, YamlConfiguration>()
+
+    fun preGenerateAll(games: List<CasinoGame>) {
+        games.forEach { config(it) }
+    }
 
     fun settings(game: CasinoGame): CasinoGameSettings {
         val config = config(game)
@@ -19,6 +23,9 @@ object CasinoConfig {
             cooldownSeconds = config.getInt("cooldownSeconds", 3).coerceAtLeast(0),
             targetHouseWinRate = config.getDouble("house.targetWinRate", 0.55).coerceIn(0.0, 1.0),
             houseEdgeInfluence = config.getDouble("house.influence", 0.25).coerceIn(0.0, 1.0),
+            postResultOverrideEnabled = config.getBoolean("postResultOverride.enabled", false),
+            postResultOverrideEveryGames = config.getInt("postResultOverride.everyGames", 0).coerceAtLeast(0),
+            postResultOverrideMaxRerolls = config.getInt("postResultOverride.maxRerolls", 25).coerceAtLeast(1),
         )
     }
 
@@ -33,6 +40,37 @@ object CasinoConfig {
             config.set("stats.houseWins", config.getLong("stats.houseWins", 0) + 1)
         }
         save(game)
+    }
+
+    fun applyPostResultOverride(
+        game: CasinoGame,
+        settings: CasinoGameSettings,
+        naturalRound: CasinoRound,
+        reroll: () -> CasinoRound,
+    ): CasinoRound {
+        if (!settings.postResultOverrideEnabled) return naturalRound
+        if (settings.postResultOverrideEveryGames <= 0) return naturalRound
+
+        val config = config(game)
+        val nextRound = config.getLong("stats.rounds", 0) + 1
+        if (nextRound % settings.postResultOverrideEveryGames.toLong() != 0L) return naturalRound
+
+        config.set("stats.postResultOverrides", config.getLong("stats.postResultOverrides", 0) + 1)
+        if (naturalRound.houseWon) {
+            save(game)
+            return naturalRound
+        }
+
+        repeat(settings.postResultOverrideMaxRerolls) {
+            val overrideRound = reroll()
+            if (overrideRound.houseWon) {
+                save(game)
+                return overrideRound
+            }
+        }
+
+        save(game)
+        return naturalRound
     }
 
     fun shouldSteerToHouseWin(game: CasinoGame, settings: CasinoGameSettings): Boolean {
@@ -66,17 +104,22 @@ object CasinoConfig {
         config.addDefault("cooldownSeconds", 3)
         config.addDefault("house.targetWinRate", 0.55)
         config.addDefault("house.influence", 0.25)
+        config.addDefault("postResultOverride.enabled", false)
+        config.addDefault("postResultOverride.everyGames", 0)
+        config.addDefault("postResultOverride.maxRerolls", 25)
         config.addDefault("stats.rounds", 0)
         config.addDefault("stats.houseWins", 0)
         config.addDefault("stats.playerWins", 0)
         config.addDefault("stats.moneyIn", 0.0)
         config.addDefault("stats.moneyOut", 0.0)
+        config.addDefault("stats.postResultOverrides", 0)
         config.options().copyDefaults(true)
         config.options().header(
             """
             ${game.displayName} casino settings.
             targetWinRate is the approximate share of rounds the house should win.
             influence controls how strongly the game nudges outcomes toward that target.
+            postResultOverride can force every Nth round through hidden rerolls before the player sees it.
             Stats are updated after every round.
             """.trimIndent()
         )

@@ -1,5 +1,6 @@
 package dev.lizainslie.cafemc.casino
 
+import dev.lizainslie.cafemc.CafeMC
 import dev.lizainslie.cafemc.chat.addRichLoreLine
 import dev.lizainslie.cafemc.chat.component
 import dev.lizainslie.cafemc.chat.sendError
@@ -51,6 +52,12 @@ object CasinoModule : PluginModule(), Listener {
 
     init {
         commands += CasinoCommand
+    }
+
+    override fun onEnable(cafeMC: CafeMC) {
+        super.onEnable(cafeMC)
+        CasinoConfig.preGenerateAll(games)
+        cafeMC.logger.info("Casino configs generated in /casino/config")
     }
 
     @EventHandler
@@ -132,7 +139,11 @@ object CasinoModule : PluginModule(), Listener {
                 return
             }
 
-            val round = game.play(player, cleanBet, gameArgs.drop(1), settings)
+            val playArgs = gameArgs.drop(1)
+            val naturalRound = game.play(player, cleanBet, playArgs, settings)
+            val round = CasinoConfig.applyPostResultOverride(game, settings, naturalRound) {
+                game.play(player, cleanBet, playArgs, settings)
+            }
             if (round.payout > 0) CafeEconomy.depositPlayer(player, round.payout)
             CasinoConfig.record(game, cleanBet, round.payout)
 

@@ -29,6 +29,9 @@ data class CasinoGameSettings(
     val cooldownSeconds: Int,
     val targetHouseWinRate: Double,
     val houseEdgeInfluence: Double,
+    val postResultOverrideEnabled: Boolean,
+    val postResultOverrideEveryGames: Int,
+    val postResultOverrideMaxRerolls: Int,
 )
 
 data class CasinoRound(
