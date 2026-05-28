@@ -23,7 +23,7 @@ object AfkModule : PluginModule(), Listener {
     private val idleMap = mutableMapOf<Player, Int>()
     private var placeholderExpansion: CafePlaceholderExpansion? = null
     
-    const val IDLE_TIMEOUT = 120 // 2 minutes
+    const val IDLE_TIMEOUT = 300 // 5 minutes
     
     init {
         commands += AfkCommand
