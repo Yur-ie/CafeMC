@@ -283,6 +283,24 @@ bukkitPluginYaml {
             usage = "/<command> <player> <message>"
         }
 
+        register("mail") {
+            description = "View private message mail"
+            permission = "cafe.msg"
+            usage = "/<command> [newest|oldest|most|least|sort <mode>|all|favorites|from <player>|clear [player]|dump|favorite <id>|unfavorite <id>|search <text|date>|debug [on|off]]"
+        }
+
+        register("favorite") {
+            description = "Favorite a displayed mail message"
+            permission = "cafe.msg"
+            usage = "/<command> <message_number>"
+        }
+
+        register("unfavorite") {
+            description = "Unfavorite a displayed mail message"
+            permission = "cafe.msg"
+            usage = "/<command> <message_number>"
+        }
+
         register("elytra") {
             description = "Toggle someones Elytra"
             usage = "/<command> <player>"

@@ -6,6 +6,7 @@ import org.jetbrains.exposed.dao.UUIDEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.dao.id.UUIDTable
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.Op
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.kotlin.datetime.timestamp
@@ -21,9 +22,21 @@ class PrivateMessage(id: EntityID<UUID>) : UUIDEntity(id) {
             this.delivered = delivered
         }
 
-        fun getUndeliveredForRecipient(recipientId: UUID) = find {
-            (PrivateMessagesTable.recipientId eq recipientId) and (PrivateMessagesTable.delivered eq false)
+        fun getUndeliveredForRecipient(recipientId: UUID, senderId: UUID? = null) = find {
+            (PrivateMessagesTable.recipientId eq recipientId) and
+                (PrivateMessagesTable.delivered eq false) and
+                (senderId?.let { PrivateMessagesTable.senderId eq it } ?: Op.TRUE)
         }.orderBy(PrivateMessagesTable.timestamp to SortOrder.ASC)
+
+        fun countUndeliveredForRecipient(recipientId: UUID) = find {
+            (PrivateMessagesTable.recipientId eq recipientId) and (PrivateMessagesTable.delivered eq false)
+        }.count()
+
+        fun countUndeliveredFromSenderToRecipient(senderId: UUID, recipientId: UUID) = find {
+            (PrivateMessagesTable.senderId eq senderId) and
+                (PrivateMessagesTable.recipientId eq recipientId) and
+                (PrivateMessagesTable.delivered eq false)
+        }.count()
 
         fun getConversationPartnerIds(playerId: UUID) = find {
             (PrivateMessagesTable.senderId eq playerId) or (PrivateMessagesTable.recipientId eq playerId)

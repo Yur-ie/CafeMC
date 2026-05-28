@@ -1,2 +1,3 @@
 db: "changeme"
 dbType: "sqlite"
+mailDebug: false

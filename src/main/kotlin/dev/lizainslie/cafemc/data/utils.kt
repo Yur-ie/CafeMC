@@ -2,6 +2,7 @@ package dev.lizainslie.cafemc.data
 
 import dev.lizainslie.cafemc.data.location.SavedLocationsTable
 import dev.lizainslie.cafemc.data.player.PlayerSettingsTable
+import dev.lizainslie.cafemc.chat.data.MailMessagesTable
 import dev.lizainslie.cafemc.chat.data.PrivateMessagesTable
 import dev.lizainslie.cafemc.economy.data.EconomyAccountsTable
 import dev.lizainslie.cafemc.economy.data.PlayerTransactionsTable
@@ -14,6 +15,7 @@ fun migrate() {
         SavedLocationsTable,
         PlayerSettingsTable,
         PrivateMessagesTable,
+        MailMessagesTable,
         EconomyAccountsTable,
         PlayerTransactionsTable,
         LockedBlocksTable,

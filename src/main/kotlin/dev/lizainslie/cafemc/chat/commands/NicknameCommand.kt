@@ -30,6 +30,7 @@ object NicknameCommand : PluginCommand(
             }
 
             OnlinePlayerCacheModule.refreshPlayerSettings(player)
+            MessageCommand.invalidateNicknameCache()
             NicknameUtil.updateNickname(player, null)
 
             player.sendRichMessage {
@@ -52,6 +53,7 @@ object NicknameCommand : PluginCommand(
             }
 
             OnlinePlayerCacheModule.refreshPlayerSettings(player)
+            MessageCommand.invalidateNicknameCache()
             NicknameUtil.updateNickname(player, nicknameComponent)
 
             player.sendRichMessage {

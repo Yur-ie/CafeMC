@@ -1,10 +1,14 @@
 package dev.lizainslie.cafemc.chat
 
 import dev.lizainslie.cafemc.afk.AfkModule
+import dev.lizainslie.cafemc.chat.MailDebug
+import dev.lizainslie.cafemc.chat.commands.FavoriteMailCommand
+import dev.lizainslie.cafemc.chat.commands.MailCommand
 import dev.lizainslie.cafemc.chat.commands.MessageCommand
 import dev.lizainslie.cafemc.chat.commands.NicknameCommand
 import dev.lizainslie.cafemc.chat.commands.TestComponentCommand
-import dev.lizainslie.cafemc.chat.data.PrivateMessage
+import dev.lizainslie.cafemc.chat.commands.UnfavoriteMailCommand
+import dev.lizainslie.cafemc.chat.data.MailMessage
 import dev.lizainslie.cafemc.chat.nms.NicknameUtil
 import dev.lizainslie.cafemc.core.PluginModule
 import dev.lizainslie.cafemc.data.player.PlayerSettings
@@ -20,7 +24,6 @@ import org.bukkit.event.player.PlayerQuitEvent
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.util.UUID
 
 object ChatModule : PluginModule(), Listener {
     val log: Logger = LoggerFactory.getLogger(javaClass)
@@ -28,6 +31,9 @@ object ChatModule : PluginModule(), Listener {
         commands += TestComponentCommand
         commands += NicknameCommand
         commands += MessageCommand
+        commands += MailCommand
+        commands += FavoriteMailCommand
+        commands += UnfavoriteMailCommand
     }
     
     // region Event Handlers
@@ -56,25 +62,29 @@ object ChatModule : PluginModule(), Listener {
             NicknameUtil.updateNickname(event.player, nicknameComponent)
         }
 
-        val offlineMessages = transaction {
-            PrivateMessage.getUndeliveredForRecipient(event.player.uniqueId).map { message ->
-                message.delivered = true
-                OfflinePrivateMessage(message.senderId, message.message)
-            }
+        transaction {
+            MailDebug.log("mail join 1")
+            MailMessage.cleanupExpired()
         }
 
-        offlineMessages.forEach { message ->
-            event.player.sendMessage(
-                MessageCommand.getReceivedMessage(
-                    sender = event.player.server.getOfflinePlayer(message.senderId),
-                    message = message.message
-                )
-            )
+        val unreadMessageCount = transaction {
+            MailDebug.log("mail join 2")
+            MailMessage.countUnreadForRecipient(event.player.uniqueId)
+        }
+        MailDebug.log("mail unread n $unreadMessageCount")
+
+        if (unreadMessageCount > 0) {
+            MailDebug.log("mail notify true")
+            event.player.sendMessage(MessageCommand.getUnreadNotification(unreadMessageCount))
+        } else {
+            MailDebug.log("mail notify false")
         }
     }
 
     @EventHandler
     fun onPlayerLeave(event: PlayerQuitEvent) {
+        MessageCommand.clearCooldown(event.player)
+
         event.quitMessage(component { 
             text("[-]") {
                 color = NamedTextColor.RED
@@ -126,12 +136,8 @@ object ChatModule : PluginModule(), Listener {
     @EventHandler
     fun onInventoryClick(event: InventoryClickEvent) {
         MessageCommand.onRecipientPickerClick(event)
+        MailCommand.onMailInventoryClick(event)
     }
     
     // endregion
 }
-
-private data class OfflinePrivateMessage(
-    val senderId: UUID,
-    val message: String,
-)
