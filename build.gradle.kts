@@ -224,7 +224,7 @@ bukkitPluginYaml {
         register("casino") {
             description = "Play casino minigames"
             permission = "cafe.casino"
-            usage = "/<command> [coinflip|dice|roulette|slots|blackjack|mines] <bet> [choice]"
+            usage = "/<command> [card|table|machine|risk|game] [bet] [choice]"
         }
         
         register("rename") {
