@@ -1,17 +1,25 @@
 package dev.lizainslie.cafemc.casino
 
 import dev.lizainslie.cafemc.CafeMC
+import org.bukkit.Material
+import org.bukkit.NamespacedKey
 import org.bukkit.configuration.file.YamlConfiguration
 import java.io.File
 import kotlin.math.max
 
 object CasinoConfig {
     private val configFolder = File(CafeMC.instance.dataFolder, "casino/config")
+    private val mainFile = File(configFolder, "main.yml")
     private val files = mutableMapOf<String, File>()
     private val configs = mutableMapOf<String, YamlConfiguration>()
+    private var mainConfig: YamlConfiguration? = null
 
     fun preGenerateAll(games: List<CasinoGame>) {
         if (!configFolder.exists()) configFolder.mkdirs()
+        if (!mainFile.exists()) {
+            CafeMC.instance.saveResource("casino/config/main.yml", false)
+        }
+        main()
         games.forEach { game ->
             val relativePath = "casino/config/${game.id}.yml"
             val dataFile = File(configFolder, "${game.id}.yml")
@@ -34,6 +42,21 @@ object CasinoConfig {
             postResultOverrideEnabled = config.getBoolean("postResultOverride.enabled", false),
             postResultOverrideEveryGames = config.getInt("postResultOverride.everyGames", 0).coerceAtLeast(0),
             postResultOverrideMaxRerolls = config.getInt("postResultOverride.maxRerolls", 25).coerceAtLeast(1),
+        )
+    }
+
+    fun mainSettings(): CasinoMainSettings {
+        val config = main()
+        val modeName = config.getString("economy.mode", "money").orEmpty()
+        val mode = CasinoEconomyMode.entries.firstOrNull { it.name.equals(modeName, ignoreCase = true) }
+            ?: CasinoEconomyMode.MONEY
+        return CasinoMainSettings(
+            mode = mode,
+            chipBuyInRate = config.getDouble("chips.buyInRate", 1.0).coerceAtLeast(0.0),
+            chipCashoutRate = config.getDouble("chips.cashoutRate", 0.75).coerceAtLeast(0.0),
+            chipCurrencyName = config.getString("chips.currencyName", "Chips").orEmpty().ifBlank { "Chips" },
+            itemBuyInRules = parseItems(config, "items.buyIn"),
+            itemRedeemRules = parseItems(config, "items.redeem"),
         )
     }
 
@@ -138,4 +161,78 @@ object CasinoConfig {
         val file = files[game.id] ?: return
         config.save(file)
     }
+
+    private fun main(): YamlConfiguration {
+        mainConfig?.let { return it }
+        val config = if (mainFile.exists()) YamlConfiguration.loadConfiguration(mainFile) else YamlConfiguration()
+        applyMainDefaults(config)
+        config.save(mainFile)
+        mainConfig = config
+        return config
+    }
+
+    private fun parseItems(config: YamlConfiguration, path: String): List<CasinoItemRule> {
+        val section = config.getConfigurationSection(path) ?: return emptyList()
+        return section.getKeys(false).mapNotNull { key ->
+            val base = "$path.$key"
+            val material = Material.matchMaterial(config.getString("$base.material").orEmpty()) ?: return@mapNotNull null
+            val pdcRaw = config.getConfigurationSection("$base.requiredPdc")
+                ?.getKeys(false)
+                ?.associateWith { pdcKey -> config.getString("$base.requiredPdc.$pdcKey").orEmpty() }
+                .orEmpty()
+            CasinoItemRule(
+                id = key,
+                material = material,
+                amount = config.getInt("$base.amount", 1).coerceAtLeast(1),
+                chips = config.getDouble("$base.chips", 0.0),
+                customModelData = if (config.contains("$base.customModelData")) config.getInt("$base.customModelData") else null,
+                displayNameContains = config.getString("$base.displayNameContains"),
+                loreContains = config.getString("$base.loreContains"),
+                requiredPdc = pdcRaw,
+                nbtLike = config.getString("$base.nbtLike"),
+                entityDataLike = config.getString("$base.entityDataLike"),
+            )
+        }
+    }
+
+    private fun applyMainDefaults(config: YamlConfiguration) {
+        config.addDefault("economy.mode", "money")
+        config.addDefault("chips.buyInRate", 1.0)
+        config.addDefault("chips.cashoutRate", 0.75)
+        config.addDefault("chips.currencyName", "Chips")
+        config.options().copyDefaults(true)
+        config.options().header(
+            """
+            Main casino economy settings.
+            mode: money | chips | items
+            chips: buyInRate = money to chips multiplier, cashoutRate = chips to money multiplier.
+            items: buyIn/redeem rules can match by material + optional model/name/lore/PDC.
+            nbtLike/entityDataLike are freeform notes to document intent for custom item/entity data.
+            """.trimIndent()
+        )
+    }
+}
+
+data class CasinoMainSettings(
+    val mode: CasinoEconomyMode,
+    val chipBuyInRate: Double,
+    val chipCashoutRate: Double,
+    val chipCurrencyName: String,
+    val itemBuyInRules: List<CasinoItemRule>,
+    val itemRedeemRules: List<CasinoItemRule>,
+)
+
+data class CasinoItemRule(
+    val id: String,
+    val material: Material,
+    val amount: Int,
+    val chips: Double,
+    val customModelData: Int?,
+    val displayNameContains: String?,
+    val loreContains: String?,
+    val requiredPdc: Map<String, String>,
+    val nbtLike: String?,
+    val entityDataLike: String?,
+) {
+    fun pdcNamespacedKeys() = requiredPdc.mapKeys { NamespacedKey.fromString(it.key, CafeMC.instance) ?: NamespacedKey.minecraft(it.key.lowercase()) }
 }

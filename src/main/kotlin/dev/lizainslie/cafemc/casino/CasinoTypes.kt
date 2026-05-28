@@ -22,6 +22,12 @@ enum class CasinoCategory {
     RISK,
 }
 
+enum class CasinoEconomyMode {
+    MONEY,
+    CHIPS,
+    ITEMS,
+}
+
 data class CasinoGameSettings(
     val enabled: Boolean,
     val defaultBet: Double,

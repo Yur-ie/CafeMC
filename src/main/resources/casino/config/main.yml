@@ -1,0 +1,44 @@
+economy:
+  mode: money
+chips:
+  buyInRate: 1.0
+  cashoutRate: 0.75
+  currencyName: Chips
+items:
+  buyIn:
+    token_basic:
+      material: GOLD_NUGGET
+      amount: 16
+      chips: 10.0
+      customModelData: 12001
+      displayNameContains: "Casino Token"
+      loreContains: "Redeemable"
+      requiredPdc:
+        cafemc:casino_token: "basic"
+      nbtLike: "{token:true,tier:\"basic\"}"
+      entityDataLike: "{source:\"event_crate\"}"
+  redeem:
+    prize_basic:
+      material: GOLDEN_APPLE
+      amount: 1
+      chips: 25.0
+      customModelData: 13001
+      displayNameContains: "Casino Prize"
+      loreContains: "Limited"
+      requiredPdc:
+        cafemc:casino_prize: "basic"
+      nbtLike: "{prize:true,tier:\"basic\"}"
+      entityDataLike: "{season:\"spring\"}"
+    prize_unbreaking_book:
+      material: ENCHANTED_BOOK
+      amount: 1
+      chips: 150.0
+      customModelData: 23010
+      displayNameContains: "Unbreaking Tome"
+      loreContains: "Tier II"
+      requiredPdc:
+        cafemc:casino_prize: "unbreaking_book"
+        cafemc:enchant: "unbreaking"
+        cafemc:enchant_level: "3"
+      nbtLike: "{StoredEnchantments:[{id:\"minecraft:unbreaking\",lvl:3s}]}"
+      entityDataLike: "{source:\"casino\",pool:\"books\",rarity:\"rare\"}"
