@@ -55,6 +55,15 @@ object CasinoConfig {
             chipBuyInRate = config.getDouble("chips.buyInRate", 1.0).coerceAtLeast(0.0),
             chipCashoutRate = config.getDouble("chips.cashoutRate", 0.75).coerceAtLeast(0.0),
             chipCurrencyName = config.getString("chips.currencyName", "Chips").orEmpty().ifBlank { "Chips" },
+            dailyBetLimit = config.getDouble("limits.dailyBet", 50_000.0).coerceAtLeast(0.0),
+            dailyLossLimit = config.getDouble("limits.dailyLoss", 10_000.0).coerceAtLeast(0.0),
+            weeklyBetLimit = config.getDouble("limits.weeklyBet", 250_000.0).coerceAtLeast(0.0),
+            weeklyLossLimit = config.getDouble("limits.weeklyLoss", 50_000.0).coerceAtLeast(0.0),
+            adaptiveCooldownStep = config.getInt("limits.adaptiveCooldownStepSeconds", 1).coerceAtLeast(0),
+            adaptiveCooldownMax = config.getInt("limits.adaptiveCooldownMaxSeconds", 20).coerceAtLeast(0),
+            edgeMin = config.getDouble("house.edgeMin", 0.45).coerceIn(0.0, 1.0),
+            edgeMax = config.getDouble("house.edgeMax", 0.75).coerceIn(0.0, 1.0),
+            bigBetConfirmAmount = config.getDouble("ui.bigBetConfirmAmount", 5_000.0).coerceAtLeast(0.0),
             itemBuyInRules = parseItems(config, "items.buyIn"),
             itemRedeemRules = parseItems(config, "items.redeem"),
         )
@@ -200,6 +209,15 @@ object CasinoConfig {
         config.addDefault("chips.buyInRate", 1.0)
         config.addDefault("chips.cashoutRate", 0.75)
         config.addDefault("chips.currencyName", "Chips")
+        config.addDefault("limits.dailyBet", 50_000.0)
+        config.addDefault("limits.dailyLoss", 10_000.0)
+        config.addDefault("limits.weeklyBet", 250_000.0)
+        config.addDefault("limits.weeklyLoss", 50_000.0)
+        config.addDefault("limits.adaptiveCooldownStepSeconds", 1)
+        config.addDefault("limits.adaptiveCooldownMaxSeconds", 20)
+        config.addDefault("house.edgeMin", 0.45)
+        config.addDefault("house.edgeMax", 0.75)
+        config.addDefault("ui.bigBetConfirmAmount", 5_000.0)
         config.options().copyDefaults(true)
         config.options().header(
             """
@@ -218,6 +236,15 @@ data class CasinoMainSettings(
     val chipBuyInRate: Double,
     val chipCashoutRate: Double,
     val chipCurrencyName: String,
+    val dailyBetLimit: Double,
+    val dailyLossLimit: Double,
+    val weeklyBetLimit: Double,
+    val weeklyLossLimit: Double,
+    val adaptiveCooldownStep: Int,
+    val adaptiveCooldownMax: Int,
+    val edgeMin: Double,
+    val edgeMax: Double,
+    val bigBetConfirmAmount: Double,
     val itemBuyInRules: List<CasinoItemRule>,
     val itemRedeemRules: List<CasinoItemRule>,
 )

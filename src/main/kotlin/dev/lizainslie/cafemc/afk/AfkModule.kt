@@ -17,8 +17,10 @@ import org.bukkit.event.EventHandler
 import org.bukkit.event.Listener
 import org.bukkit.event.player.PlayerInputEvent
 import org.bukkit.event.player.PlayerQuitEvent
+import org.slf4j.LoggerFactory
 
 object AfkModule : PluginModule(), Listener {
+    private val log = LoggerFactory.getLogger(javaClass)
     private val afkMap = mutableMapOf<Player, Boolean>()
     private val idleMap = mutableMapOf<Player, Int>()
     private var placeholderExpansion: CafePlaceholderExpansion? = null
@@ -107,12 +109,19 @@ object AfkModule : PluginModule(), Listener {
             text(nowOrNoLonger(newAfkStatus)) { color = NamedTextColor.GRAY }
             text(" AFK.") { color = NamedTextColor.GRAY }
         }
-        
-        ChatUtil.broadcastEmbedToDiscord {
-            author {
-                name = "${player.nicknameOrDisplayName().toPlainText()} is ${nowOrNoLonger(newAfkStatus)} AFK."
-                iconUrl = "https://api.mineatar.io/face/${player.uniqueId}"
+
+        val discordSrv = Bukkit.getPluginManager().getPlugin("DiscordSRV")
+        if (discordSrv == null || !discordSrv.isEnabled) return
+
+        runCatching {
+            ChatUtil.broadcastEmbedToDiscord {
+                author {
+                    name = "${player.nicknameOrDisplayName().toPlainText()} is ${nowOrNoLonger(newAfkStatus)} AFK."
+                    iconUrl = "https://api.mineatar.io/face/${player.uniqueId}"
+                }
             }
+        }.onFailure {
+            log.debug("Skipping Discord AFK broadcast: ${it.message}")
         }
     }
     

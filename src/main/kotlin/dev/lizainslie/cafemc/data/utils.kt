@@ -4,6 +4,9 @@ import dev.lizainslie.cafemc.data.location.SavedLocationsTable
 import dev.lizainslie.cafemc.data.player.PlayerSettingsTable
 import dev.lizainslie.cafemc.chat.data.MailMessagesTable
 import dev.lizainslie.cafemc.chat.data.PrivateMessagesTable
+import dev.lizainslie.cafemc.casino.data.CasinoChipAccountsTable
+import dev.lizainslie.cafemc.casino.data.CasinoLimitStatesTable
+import dev.lizainslie.cafemc.casino.data.CasinoTransactionsTable
 import dev.lizainslie.cafemc.economy.data.EconomyAccountsTable
 import dev.lizainslie.cafemc.economy.data.PlayerTransactionsTable
 import dev.lizainslie.cafemc.protect.data.LockedBlockBreakIncidentsTable
@@ -16,6 +19,9 @@ fun migrate() {
         PlayerSettingsTable,
         PrivateMessagesTable,
         MailMessagesTable,
+        CasinoChipAccountsTable,
+        CasinoLimitStatesTable,
+        CasinoTransactionsTable,
         EconomyAccountsTable,
         PlayerTransactionsTable,
         LockedBlocksTable,
@@ -26,21 +32,12 @@ fun migrate() {
         val allStatements =
             MigrationUtils.statementsRequiredForDatabaseMigration(*tables.toTypedArray(), withLogs = true)
 
-        var migrationScript = ""
-
-        // Append statements
+        println("Migration statements (${allStatements.size}):")
         allStatements.forEach { statement ->
-            // Add semicolon only if it's not already there
-            val conditionalSemicolon = if (statement.last() == ';') "" else ";"
-
-            migrationScript += "$statement$conditionalSemicolon\n"
+            val sql = if (statement.lastOrNull() == ';') statement else "$statement;"
+            println(sql)
+            exec(sql)
         }
-
-        println("Migration script:\n$migrationScript")
-
-        // just fucking run it. fuck you flyway you made me do this shit
-        exec(migrationScript) {
-            println("Migrated Successfully")
-        }
+        println("Migrated Successfully")
     }
 }
