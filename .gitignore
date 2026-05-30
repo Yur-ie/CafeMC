@@ -124,3 +124,7 @@ devServer/plugins/CafeMC/cafemc.db
 
 devServer/
 cafemc.db
+
+# Ignore generated content from tooling
+
+/generated
