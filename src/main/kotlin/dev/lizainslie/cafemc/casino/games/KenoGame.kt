@@ -72,6 +72,13 @@ object KenoGame : CasinoGame {
         when (slot) {
             BET_MINUS -> holder.bet = (holder.bet - 10.0).coerceAtLeast(1.0)
             BET_PLUS -> holder.bet = (holder.bet + 10.0).coerceAtMost(10_000.0)
+            CLEAR_BUTTON -> {
+                holder.picks.clear()
+                holder.lastDraw = emptySet()
+                player.playSound(player.location, Sound.UI_BUTTON_CLICK, 0.7f, 1.4f)
+                renderBoard(holder.inventoryRef, holder)
+                return
+            }
             DRAW_BUTTON -> {
                 if (holder.picks.size != 3) {
                     player.playSound(player.location, Sound.ENTITY_VILLAGER_NO, 0.7f, 0.8f)
@@ -80,21 +87,9 @@ object KenoGame : CasinoGame {
                 if (!canRunBet(holder.bet)) return
                 holder.locked = true
                 val draw = (1..20).shuffled().take(5)
-                val hits = holder.picks.count { it in draw }
-                val multiplier = when (hits) {
-                    3 -> 12.0
-                    2 -> 3.0
-                    1 -> 1.25
-                    else -> 0.0
-                }
-                holder.lastDraw = draw.toSet()
+                holder.lastDraw = emptySet()
                 renderBoard(holder.inventoryRef, holder)
-                player.playSound(player.location, Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.4f)
-                val round = CasinoRound(
-                    summary = "Picked ${holder.picks.sorted().joinToString()}. Draw: ${draw.joinToString()}. Hits: $hits.",
-                    payout = holder.bet * multiplier,
-                )
-                onSettled(holder.bet, round)
+                animateDraw(player, holder, draw, onSettled)
                 return
             }
         }
@@ -108,22 +103,68 @@ object KenoGame : CasinoGame {
         renderBoard(holder.inventoryRef, holder)
     }
 
+    private fun animateDraw(
+        player: Player,
+        holder: KenoInventoryHolder,
+        draw: List<Int>,
+        onSettled: (Double, CasinoRound) -> Unit,
+    ) {
+        val drawSet = mutableSetOf<Int>()
+        fun step(index: Int) {
+            if (!player.isOnline || player.openInventory.topInventory.holder != holder) return
+            if (index >= draw.size) {
+                val hits = holder.picks.count { it in drawSet }
+                val multiplier = when (hits) {
+                    3 -> 12.0
+                    2 -> 3.0
+                    1 -> 1.25
+                    else -> 0.0
+                }
+                val round = CasinoRound(
+                    summary = "Picked ${holder.picks.sorted().joinToString()}. Draw: ${draw.joinToString()}. Hits: $hits.",
+                    payout = holder.bet * multiplier,
+                )
+                holder.locked = false
+                renderBoard(holder.inventoryRef, holder)
+                onSettled(holder.bet, round)
+                return
+            }
+            drawSet += draw[index]
+            holder.lastDraw = drawSet.toSet()
+            renderBoard(holder.inventoryRef, holder)
+            player.playSound(player.location, Sound.BLOCK_NOTE_BLOCK_HAT, 0.6f, 1.8f)
+            Bukkit.getScheduler().runTaskLater(dev.lizainslie.cafemc.CafeMC.instance, Runnable { step(index + 1) }, 8L)
+        }
+        step(0)
+    }
+
     private fun renderBoard(inventory: Inventory, holder: KenoInventoryHolder) {
-        val border = ItemStack(Material.BLACK_STAINED_GLASS_PANE)
-        for (slot in 0 until inventory.size) inventory.setItem(slot, border)
+        for (slot in 0 until inventory.size) inventory.setItem(slot, ItemStack(Material.BLACK_STAINED_GLASS_PANE))
+
+        // top row: x x x [pick1] [pick2] [pick3] x x x
+        for (slot in listOf(3, 4, 5)) {
+            inventory.setItem(slot, ItemStack(Material.GRAY_STAINED_GLASS_PANE).apply {
+                itemMeta = itemMeta?.apply { setDisplayName("-") }
+            })
+        }
+        holder.picks.sorted().forEachIndexed { idx, number ->
+            val slot = 3 + idx
+            inventory.setItem(slot, kenoNumberItem(number, "selected"))
+        }
+
+        // row 2 empty spacer
+        for (col in 0..8) inventory.setItem(9 + col, ItemStack(Material.AIR))
 
         slotToNumber.forEach { (slot, number) ->
             val hit = number in holder.lastDraw
             val picked = number in holder.picks
-            val mat = when {
-                hit && picked -> Material.LIME_STAINED_GLASS_PANE
-                hit -> Material.GREEN_STAINED_GLASS_PANE
-                picked -> Material.YELLOW_STAINED_GLASS_PANE
-                else -> Material.LIGHT_GRAY_STAINED_GLASS_PANE
+            val state = when {
+                holder.lastDraw.isNotEmpty() && picked && !hit -> "miss"
+                hit -> "hit"
+                picked -> "selected"
+                else -> "neutral"
             }
-            inventory.setItem(slot, ItemStack(mat).apply {
-                itemMeta = itemMeta?.apply { setDisplayName(number.toString()) }
-            })
+            inventory.setItem(slot, kenoNumberItem(number, state))
         }
 
         inventory.setItem(BET_MINUS, ItemStack(Material.RED_STAINED_GLASS_PANE).apply {
@@ -136,8 +177,27 @@ object KenoGame : CasinoGame {
             itemMeta = itemMeta?.apply { setDisplayName("Bet: ${holder.bet.toInt()}") }
         })
         inventory.setItem(DRAW_BUTTON, ItemStack(Material.EMERALD_BLOCK).apply {
-            itemMeta = itemMeta?.apply { setDisplayName(if (holder.locked) "Finished" else "Draw (${holder.picks.size}/3)") }
+            itemMeta = itemMeta?.apply { setDisplayName(if (holder.locked) "Drawing..." else "Draw (${holder.picks.size}/3)") }
         })
+        inventory.setItem(CLEAR_BUTTON, ItemStack(Material.BARRIER).apply {
+            itemMeta = itemMeta?.apply { setDisplayName("Clear Picks") }
+        })
+    }
+
+    private fun kenoNumberItem(number: Int, state: String): ItemStack {
+        val cmd = when (state) {
+            "selected" -> BASE_CMD + 100 + number
+            "hit" -> BASE_CMD + 200 + number
+            "miss" -> BASE_CMD + 300 + number
+            else -> BASE_CMD + number
+        }
+        return ItemStack(Material.PAPER).apply {
+            itemMeta = itemMeta?.apply {
+                setCustomModelData(cmd)
+                setDisplayName(number.toString())
+                lore = listOf(state.replaceFirstChar { it.uppercase() })
+            }
+        }
     }
 
     class KenoInventoryHolder(
@@ -152,15 +212,18 @@ object KenoGame : CasinoGame {
         override fun getInventory(): Inventory = inventoryRef
     }
 
+    // boxed field with 1-column side borders and 5x4 number grid
     private val numberSlots = listOf(
-        10, 11, 12, 13, 14,
-        19, 20, 21, 22, 23,
-        28, 29, 30, 31, 32,
-        37, 38, 39, 40, 41,
+        20, 21, 22, 23, 24,
+        29, 30, 31, 32, 33,
+        38, 39, 40, 41, 42,
+        47, 48, 49, 50, 51,
     )
     private val slotToNumber = numberSlots.withIndex().associate { (index, slot) -> slot to (index + 1) }
-    const val BET_MINUS = 47
-    const val BET_DISPLAY = 49
-    const val BET_PLUS = 51
+    private const val BASE_CMD = 91000
+    const val BET_MINUS = 43
+    const val BET_DISPLAY = 52
+    const val BET_PLUS = 44
+    const val CLEAR_BUTTON = 45
     const val DRAW_BUTTON = 53
 }

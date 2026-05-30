@@ -689,6 +689,12 @@ object CasinoModule : PluginModule(), Listener {
                             text("Chat: ") { color = NamedTextColor.DARK_GRAY }
                             text("/casino ${game.id} <bet> ${game.choiceUsage}") { color = NamedTextColor.AQUA }
                         }
+                        if (game.id in setOf("slots", "keno", "blackjack")) {
+                            addRichLoreLine {
+                                text("Mode: ") { color = NamedTextColor.DARK_GRAY }
+                                text("Interactive UI") { color = NamedTextColor.GREEN }
+                            }
+                        }
                     }
                 })
             }
