@@ -23,7 +23,7 @@ ZIP_OUT = ROOT / "generated" / "CafeMC-Casino-ResourcePack.zip"
 PACK_FOLDER_NAME = "CafeMC-Casino-ResourcePack"
 NAMESPACE = "cafemc"
 
-PACK_FORMAT = 71  # 1.21.10
+PACK_FORMAT = 69  # 1.21.9-1.21.10
 
 BASE_CMD = 91000
 VARIANT_OFFSETS = {
@@ -44,17 +44,25 @@ VARIANT_COLORS = {
 def ensure_dirs() -> dict[str, Path]:
     textures = OUT / "assets" / NAMESPACE / "textures" / "item" / "keno"
     models = OUT / "assets" / NAMESPACE / "models" / "item" / "keno"
+    mc_items = OUT / "assets" / "minecraft" / "items"
     mc_item_models = OUT / "assets" / "minecraft" / "models" / "item"
-    for p in (textures, models, mc_item_models):
+    for p in (textures, models, mc_items, mc_item_models):
         p.mkdir(parents=True, exist_ok=True)
-    return {"textures": textures, "models": models, "mc_item_models": mc_item_models}
+    return {
+        "textures": textures,
+        "models": models,
+        "mc_items": mc_items,
+        "mc_item_models": mc_item_models,
+    }
 
 
 def write_pack_mcmeta() -> None:
     data = {
         "pack": {
-            "pack_format": PACK_FORMAT,
             "description": "CafeMC Auto-Generated Casino Textures",
+            # 1.21.9+ uses min/max format checks for compatibility.
+            "min_format": PACK_FORMAT,
+            "max_format": PACK_FORMAT,
         }
     }
     (OUT / "pack.mcmeta").write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
@@ -113,6 +121,32 @@ def write_minecraft_carrier_overrides(target: Path) -> None:
     target.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
+def write_minecraft_item_definition(target: Path) -> None:
+    entries = []
+    for n in range(1, 21):
+        for variant, offset in VARIANT_OFFSETS.items():
+            cmd = BASE_CMD + offset + n
+            entries.append(
+                {
+                    "threshold": float(cmd),
+                    "model": {
+                        "type": "minecraft:model",
+                        "model": f"{NAMESPACE}:item/keno/{variant}_{n}",
+                    },
+                }
+            )
+    entries.sort(key=lambda e: e["threshold"])
+    data = {
+        "model": {
+            "type": "minecraft:range_dispatch",
+            "property": "minecraft:custom_model_data",
+            "fallback": {"type": "minecraft:model", "model": "minecraft:item/paper"},
+            "entries": entries,
+        }
+    }
+    target.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+
+
 def write_mapping_json(target: Path) -> None:
     mapping: dict[str, dict[str, int]] = {}
     for variant, offset in VARIANT_OFFSETS.items():
@@ -161,7 +195,10 @@ def main() -> None:
             draw_tile(n, variant, dirs["textures"] / tex_name)
             write_model(f"{NAMESPACE}:item/keno/{variant}_{n}", dirs["models"] / model_name)
 
+    # Legacy predicate path (older versions)
     write_minecraft_carrier_overrides(dirs["mc_item_models"] / "paper.json")
+    # Modern 1.21.4+ path
+    write_minecraft_item_definition(dirs["mc_items"] / "paper.json")
     write_mapping_json(OUT / "keno_model_data_map.json")
     if ZIP_OUT.exists():
         ZIP_OUT.unlink()
