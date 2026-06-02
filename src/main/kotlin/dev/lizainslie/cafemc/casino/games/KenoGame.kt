@@ -14,6 +14,7 @@ import org.bukkit.entity.Player
 import org.bukkit.inventory.Inventory
 import org.bukkit.inventory.InventoryHolder
 import org.bukkit.inventory.ItemStack
+import org.bukkit.inventory.meta.components.CustomModelDataComponent
 import java.util.UUID
 
 object KenoGame : CasinoGame {
@@ -113,6 +114,7 @@ object KenoGame : CasinoGame {
         fun step(index: Int) {
             if (!player.isOnline || player.openInventory.topInventory.holder != holder) return
             if (index >= draw.size) {
+                dev.lizainslie.cafemc.CafeMC.instance.logger.info("keno draw done n ${draw.joinToString(",")}")
                 val hits = holder.picks.count { it in drawSet }
                 val multiplier = when (hits) {
                     3 -> 12.0
@@ -130,6 +132,7 @@ object KenoGame : CasinoGame {
                 return
             }
             drawSet += draw[index]
+            dev.lizainslie.cafemc.CafeMC.instance.logger.info("keno draw step n ${draw[index]}")
             holder.lastDraw = drawSet.toSet()
             renderBoard(holder.inventoryRef, holder)
             player.playSound(player.location, Sound.BLOCK_NOTE_BLOCK_HAT, 0.6f, 1.8f)
@@ -194,6 +197,9 @@ object KenoGame : CasinoGame {
         return ItemStack(Material.PAPER).apply {
             itemMeta = itemMeta?.apply {
                 setCustomModelData(cmd)
+                val modelComponent: CustomModelDataComponent = customModelDataComponent
+                modelComponent.floats = listOf(cmd.toFloat())
+                setCustomModelDataComponent(modelComponent)
                 setDisplayName(number.toString())
                 lore = listOf(state.replaceFirstChar { it.uppercase() })
             }

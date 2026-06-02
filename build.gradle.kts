@@ -1,4 +1,5 @@
 import xyz.jpenilla.resourcefactory.bukkit.BukkitPluginYaml
+import java.nio.file.Files
 
 plugins {
     kotlin("jvm") version "2.1.0"
@@ -95,6 +96,43 @@ kotlin {
 
 tasks.build {
     dependsOn(tasks.reobfJar)
+}
+
+val localServerPluginsDir = providers.gradleProperty("localServerPluginsDir")
+    .orElse("${System.getProperty("user.home")}/mc-dev/cafemc/plugins")
+
+val deployLocalJar by tasks.registering(Copy::class) {
+    dependsOn(tasks.reobfJar)
+    val outDir = layout.buildDirectory.dir("libs")
+    from(outDir.map { dir ->
+        dir.asFile.listFiles()
+            ?.filter { it.name.endsWith(".jar") && it.name.contains("CafeMC", ignoreCase = true) }
+            ?.sortedByDescending { it.length() }
+            ?.firstOrNull()
+            ?: throw GradleException("No CafeMC jar found in ${dir.asFile}")
+    })
+    into(localServerPluginsDir)
+    rename { "CafeMC.jar" }
+    doFirst {
+        val target = file(localServerPluginsDir.get())
+        if (!target.exists()) {
+            Files.createDirectories(target.toPath())
+        }
+    }
+    doLast {
+        logger.lifecycle("Deployed CafeMC.jar to ${localServerPluginsDir.get()}")
+    }
+}
+
+val generateAndInstallResourcePack by tasks.registering(Exec::class) {
+    group = "build"
+    description = "Generate and install CafeMC resource pack (folder + zip)."
+    commandLine("python3", "tools/texturegen/generate_texture_pack.py")
+}
+
+tasks.build {
+    finalizedBy(deployLocalJar)
+    finalizedBy(generateAndInstallResourcePack)
 }
 
 tasks.test {

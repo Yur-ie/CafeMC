@@ -119,8 +119,31 @@ object CasinoModule : PluginModule(), Listener {
         if (player.uniqueId != holder.playerId || event.clickedInventory != event.view.topInventory) return
 
         val game = holder.games.getOrNull(event.slot) ?: return
-        player.closeInventory()
         val settings = CasinoConfig.settings(game)
+        if (game == SlotsGame) {
+            player.closeInventory()
+            SlotsGame.openInteractive(
+                player = player,
+                initialBet = settings.defaultBet,
+                settings = settings,
+                main = CasinoConfig.mainSettings(),
+                canSpinWithBet = { bet -> CasinoCommand.canSpinSlots(player, bet, settings) },
+            ) { bet, round ->
+                CasinoCommand.settleSlotsRound(player, bet, round)
+            }
+            return
+        }
+        if (game == KenoGame) {
+            player.closeInventory()
+            KenoGame.openInteractive(player, settings.defaultBet)
+            return
+        }
+        if (game == BlackjackGame) {
+            player.closeInventory()
+            CasinoCommand.play(player, game, listOf(settings.defaultBet.toCleanString()))
+            return
+        }
+        player.closeInventory()
         CasinoCommand.play(player, game, listOf(settings.defaultBet.toCleanString()))
     }
 

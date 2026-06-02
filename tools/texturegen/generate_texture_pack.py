@@ -140,6 +140,7 @@ def write_minecraft_item_definition(target: Path) -> None:
         "model": {
             "type": "minecraft:range_dispatch",
             "property": "minecraft:custom_model_data",
+            "index": 0,
             "fallback": {"type": "minecraft:model", "model": "minecraft:item/paper"},
             "entries": entries,
         }
@@ -185,6 +186,8 @@ def install_folder_pack() -> Path | None:
 
 
 def main() -> None:
+    if OUT.exists():
+        shutil.rmtree(OUT)
     dirs = ensure_dirs()
     write_pack_mcmeta()
 
@@ -195,9 +198,8 @@ def main() -> None:
             draw_tile(n, variant, dirs["textures"] / tex_name)
             write_model(f"{NAMESPACE}:item/keno/{variant}_{n}", dirs["models"] / model_name)
 
-    # Legacy predicate path (older versions)
+    # Keep both paths for maximum client compatibility.
     write_minecraft_carrier_overrides(dirs["mc_item_models"] / "paper.json")
-    # Modern 1.21.4+ path
     write_minecraft_item_definition(dirs["mc_items"] / "paper.json")
     write_mapping_json(OUT / "keno_model_data_map.json")
     if ZIP_OUT.exists():
